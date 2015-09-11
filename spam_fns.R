@@ -1,3 +1,4 @@
+load('emails.rda')
 email <- emails[[10]]
 
 is.spam <- function(email)
@@ -30,8 +31,9 @@ numLinesBody <- function(email)
 ### 4 Body chars
 bodyCharCount <- function(email)
   {
-  sum(unlist(lapply(email$body, nchar, type="bytes")))
+  do.call(sum, lapply(email$body, nchar, type = "bytes"))
   }
+
 
 ### 6 !!!!
 subjectExclamationCount <- function(email)
@@ -71,35 +73,21 @@ numAttachments <- function(email)
 
 #########################################
 ### 9 # recip
-numRecipients <- function(x)
+numRecip <- function(email)
   {
-  count <- function(x, field) {
-    if(length(x$header) >= 1 && field %in% tolower(names(x$header))){
-      names(x$header) <- tolower(names(x$header))
-      y <- unlist(strsplit(x$header[field], split=","))
-      y <- y[which(y!="")]
-      number<-length(y)
-      return(number)
-    }
-    else return(0)
+  head <- email$head
+  sum(grepl("^(cc|to)(|[1-9][0-9]*)$", names(head)))
   }
-  x<-count(x, field="to")+count(x, field="cc")                           
-  return(x)                                               
-}
 
 ### 10 %caps
-percentCapitals <- function(x)
-{
-  if(length(x$body>=1)){
-    capital <- sum(str_count(x$body, "[A-Z]"))
-    lower <- sum(str_count(x$body, "[a-z]"))
-    total <- capital + lower
-    if(total==0)
-      return(0)
-    else return(capital/total)
+
+
+percentCap <- function(email)
+  {
+  do.call(sum, lapply(email$body, nchar, type = "bytes"))
+  
   }
-  else return(0)                                          
-}
+
 
 ### 11 punct !?$#%&@* -exclude ' since contractions are OK i.e. won't
 subjectPunctuationCheck <- function(x)
