@@ -1,4 +1,10 @@
-# FUNCTION: read the message
+
+##################################
+## MAIN  ########################
+# FUNCTION: read the message ###
+###############################
+
+
 readMessage <- function(path, spamDir)
   {
 
@@ -11,10 +17,25 @@ readMessage <- function(path, spamDir)
     return(NULL)
   
   # Separate the header
-  sep.email <- split.header(email)    
-  return(list(path = path,
-              head = sep.email$header,
-              body = sep.email$body))
+  sepEmail <- split.header(email)    
+  head <- sepEmail$header
+  
+  #check for attachments
+  fields <- names(head)
+  ctLoc <- grep("^content-type$", fields)
+  
+  # content-type w/ boundary key -> attachments to extract
+  if(length(ctLoc > 0) && grepl("boundary=", tolower(head[ctLoc]))){
+    sepAtts <- sep.Att(sepEmail$body, head[ctLoc])
+    return(list(head = sepEmail$header,
+                body = sepAtts$body,
+                atts = sepAtts$atts))}
+  
+    else 
+    return(list(head = sepEmail$header,
+                body = sepEmail$body,
+                atts = character())) 
+  
   }
 
 
@@ -47,10 +68,54 @@ split.header <- function(email)
   }
 
 
+# FUNCTION GET ATTACHMENTS
+# separates body on boundary key from
+# 'content-type' field in header
 
-spamDir <- "spamdata"
-paths <- list.files(spamDir, recursive = TRUE)
-emails <- lapply(paths[1:1000], readMessage, spamDir)
+sep.Att <- function(body, ct)
+  {
+  # Split on '; ' then find split that contains 'boundary="xXxxxxxXXX"'
+  ct <- unlist(strsplit(ct, ";[[:space:]]*"))
+  key <- ct[grep("boundary", tolower(ct))]
+  
+  # keep only what's in between quotes
+  key <- strsplit(key, "[(\\\')(\\\")]")[[1]][2]
+ 
+  # key in body
+  b1 <- paste('--', key, sep = "")
+  b2 <- paste('--', key, "--", sep = "")
+  
+  # T/F vector for lines that = key in body
+    bounds <- (body %in% c(b1, b2))
+  # split on cumsum of that ^ vector
+  parts <- split(body, cumsum(bounds))
+  
+  # sep attachments  
+  isAtt <- do.call(c, lapply(parts, function(x) sum(x %in% b1) > 0))  
+  atts <- parts[isAtt]
+  atts <- lapply(atts, get.atts, b1)
+    
+  # body has no boundary keys except end boundary
+  body <- do.call(c, parts[!isAtt])
+  names(body) <- NULL  
+  # remove end boundary
+  body <- body[!(body %in% b2)]
+  
+  return(list(body = body, atts = atts)) 
+  }
 
+# FUNCTION: Creates list for each attachment
+# content-type of attachment and text of 
+# attachment
 
-
+get.atts <- function(att, key)
+  {
+  # get cont-type of attachment
+  ct <- att[grep('content-type', tolower(att))]
+  ct <- strsplit(ct, "ype: ")[[1]][2]
+  #remove boundary/content-type from body of attachment
+  att <- att[-grep('content-type', tolower(att))]
+  att <- att[-grep(key, att)]
+  #return as list
+  list(content = ct, text = att)
+  }
