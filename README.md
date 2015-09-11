@@ -18,7 +18,7 @@ I am fixing up an R script I wrote in college that parses emails into an R data 
   * Edit main script so that it creates a data frame from these functions.
   * Maybe add some more variables.
 
-*KNN.R
+* KNN.R
   * Integrate into main script
   * Better presentation of results
   * Check cross-validation
